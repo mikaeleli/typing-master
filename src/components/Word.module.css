@@ -1,0 +1,21 @@
+.word {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background-color: #333;
+    box-shadow: 0 0 0.5rem #000;
+    transition: all 0.2s ease-in-out;
+}
+
+.highlight {
+    background-color: #444;
+    box-shadow: 0 0 0.5rem #000;
+}
+
+.correct {
+    color: #0f0;
+    box-shadow: 0 0 0.5rem #0f0;
+}
