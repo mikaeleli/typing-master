@@ -8,7 +8,7 @@
     width: 100%;
     height: 100%;
     margin: 0;
-    padding: 2rem;
+    padding: 1rem;
     background-color: #fff;
     border: 1px solid #000;
     border-radius: 5px;
@@ -17,38 +17,36 @@
 }
 
 .word {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #6f6f6f;
-    margin: 0 0.5rem;
-    padding: 0.5rem 1rem;
+    /* padding: 0.5rem; */
     border-radius: 0.5rem;
     text-transform: lowercase;
 }
 
-.currentWord {
-    color: #000;
-}
-
 .character {
     display: inline-block;
-    font-size: 2rem;
+    color: #6f6f6f;
+    font-size: 1.5rem;
     font-weight: 600;
-    /* color: #000; */
-    /* margin: 0 0.5rem; */
-    padding: 0 0.125rem;
     text-align: center;
-    text-shadow: 0 0 5px #fff;
+}
 
+.error {
+    color: #ff0000;
+}
+
+.correct {
+    color: #000;
 }
 
 .currentCharacter {
     text-decoration: underline;
     text-decoration-color: #000;
-    text-decoration-thickness: 0.3rem;
+    text-decoration-thickness: 0.1rem;
     text-underline-offset: 0.6rem;
 }
 
-.error {
-    color: #ff0000;
+.seperator {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
 }

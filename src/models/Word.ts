@@ -49,23 +49,81 @@ export function getWordString(word: WordState): string {
     return word.characters.map((character) => character.character).join("");
 }
 
-export type WordResult = {
-    word: string;
-    correct: boolean;
-    errors: number;
+export type CharacterEntry = {
+    character: string;
+    status: "correct" | "incorrect";
+    context: {
+        word: string;
+        characterIndex: number;
+    };
 };
 
-export type TypingResults = {
-    words: WordResult[];
+export type TypingInput = {
+    words: WordState[];
     startTime: number;
     endTime: number;
-    errors: number;
+    keystrokes: Array<CharacterEntry>;
 };
 
-// export function calculateWordsPerMinute(results: TypingResults): number {
-//     const { words, startTime, endTime } = results;
+export type TypingReport = {
+    wordsPerMinute: number;
+    accuracy: {
+        words: number;
+        keystrokes: number;
+    };
+    errors: number;
+    time: number;
+};
 
-//     const totalWords = words.length;
-//     const minutes = (endTime - startTime) / 1000 / 60;
-//     return totalWords / minutes;
-// }
+function calculateWordsPerMinute(results: TypingInput): number {
+    const { words, startTime, endTime } = results;
+
+    const totalWords = words.length;
+    const minutes = (endTime - startTime) / 1000 / 60;
+    return totalWords / minutes;
+}
+
+function calculateWordsAccuracy(results: TypingInput): number {
+    const { words } = results;
+
+    const totalWords = words.length;
+    const correctWords = words.filter(isWordCorrect).length;
+    return (correctWords / totalWords) * 100;
+}
+
+function calculateKeystrokeAccuracy(results: TypingInput): number {
+    const { keystrokes } = results;
+
+    const totalKeystrokes = keystrokes.length;
+
+    const correctKeystrokes = keystrokes.filter(
+        (keystroke) => keystroke.status === "correct"
+    ).length;
+
+    return (correctKeystrokes / totalKeystrokes) * 100;
+}
+
+function calculateErrors(results: TypingInput): number {
+    const { keystrokes } = results;
+
+    return keystrokes.filter((keystroke) => keystroke.status === "incorrect")
+        .length;
+}
+
+function calculateTime(results: TypingInput): number {
+    const { startTime, endTime } = results;
+
+    return endTime - startTime;
+}
+
+export function createTypingReport(input: TypingInput): TypingReport {
+    return {
+        wordsPerMinute: calculateWordsPerMinute(input),
+        accuracy: {
+            keystrokes: calculateKeystrokeAccuracy(input),
+            words: calculateWordsAccuracy(input),
+        },
+        errors: calculateErrors(input),
+        time: calculateTime(input),
+    };
+}

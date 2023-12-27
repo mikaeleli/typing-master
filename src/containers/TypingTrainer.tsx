@@ -1,70 +1,55 @@
 import { generate } from "random-words";
-import { useMemo, useState } from "react";
-import { Word } from "../components/Word";
+import { useEffect, useState } from "react";
 
-import styles from "./TypingTrainer.module.css";
-import { CurrentWord } from "../components/CurrentWord";
 import {
-    WordState,
+    CharacterEntry,
+    TypingReport,
+    createTypingReport,
     createWordState,
     getCurrentCharacterState,
     getWordString,
 } from "../models/Word";
 import { WordBuffer } from "../components/WordBuffer";
+import { Results } from "../components/Results";
 
 const GO_TO_NEXT_WORD_CHAR = " ";
 
-type CharacterEntry = {
-    character: string;
-    status: "correct" | "incorrect";
-    context: {
-        word: string;
-        characterIndex: number;
-    };
-};
+const startTime = Date.now();
 
 export const TypingTrainer = () => {
     const [characterEntries, setCharacterEntries] = useState<CharacterEntry[]>(
-        []
+        [],
     );
+    const [words, setWords] = useState(() => generate(10).map(createWordState));
+    const [currentWordIndex, setCurrentWordIndex] = useState(0);
+    const [results, setResults] = useState<TypingReport>();
 
-    const words = useMemo(() => {
-        return generate(10);
-    }, []);
+    const currentWordState = words[currentWordIndex];
 
-    const mikki = useMemo(() => {
-        return generate(10).map(createWordState);
-    }, []);
-
-    const [wordIndex, setWordIndex] = useState(0);
-
-    const [wordState, setWordState] = useState<WordState>(
-        createWordState(words[wordIndex])
-    );
-
-    // console.log({ ...wordState });
-    console.log(characterEntries);
+    const isLastWord = currentWordIndex === words.length - 1;
+    const currentCharacterState = getCurrentCharacterState(currentWordState);
+    const isFinished = isLastWord && currentCharacterState === undefined;
 
     const handleInputKeyPress = (
-        event: React.ChangeEvent<HTMLInputElement>
+        event: React.ChangeEvent<HTMLInputElement>,
     ) => {
-        const char = event.target.value[event.target.value.length - 1];
-
-        const shouldGoToNextWord =
-            char === GO_TO_NEXT_WORD_CHAR &&
-            !wordState.characters.some(
-                (characterState) => characterState.status === "pending"
-            );
-
-        if (shouldGoToNextWord) {
-            const newWordIndex = (wordIndex + 1) % words.length;
-
-            setWordIndex(newWordIndex);
-            setWordState(createWordState(words[newWordIndex]));
+        if (isFinished) {
             return;
         }
 
-        const currentCharacterState = getCurrentCharacterState(wordState);
+        const inputCharacter =
+            event.target.value[event.target.value.length - 1];
+
+        const shouldGoToNextWord =
+            inputCharacter === GO_TO_NEXT_WORD_CHAR &&
+            !currentWordState.characters.some(
+                (characterState) => characterState.status === "pending",
+            );
+
+        if (shouldGoToNextWord) {
+            setCurrentWordIndex((oldWordIndex) => oldWordIndex + 1);
+            return;
+        }
 
         if (!currentCharacterState) {
             return;
@@ -76,79 +61,79 @@ export const TypingTrainer = () => {
             return [
                 ...prevState,
                 {
-                    character: char,
-                    status: char === charToMatch ? "correct" : "incorrect",
+                    character: inputCharacter,
+                    status:
+                        inputCharacter === charToMatch
+                            ? "correct"
+                            : "incorrect",
                     context: {
-                        word: getWordString(wordState),
-                        characterIndex: wordState.characterIndex,
+                        word: getWordString(currentWordState),
+                        characterIndex: currentWordState.characterIndex,
                     },
                 },
             ];
         });
 
-        if (char !== charToMatch) {
-            setWordState((prevState) => ({
-                ...prevState,
-                characters: prevState.characters.map(
-                    (characterState, index) => {
-                        if (index !== prevState.characterIndex) {
-                            return characterState;
-                        }
+        const isCorrectCharacter = inputCharacter === charToMatch;
 
-                        return {
-                            ...characterState,
-                            status: "incorrect",
-                        };
-                    }
-                ),
-            }));
-            return;
-        }
+        setWords((prevState) =>
+            prevState.map((oldWordState) => {
+                const isCurrentWord = oldWordState.id === currentWordState.id;
 
-        setWordState((prevState) => {
-            return {
-                ...prevState,
-                characterIndex: prevState.characterIndex + 1,
-                characters: prevState.characters.map(
-                    (characterState, index) => {
-                        if (index !== prevState.characterIndex) {
-                            return characterState;
-                        }
+                if (!isCurrentWord) {
+                    return oldWordState;
+                }
 
-                        const newStatus =
-                            characterState.status === "pending"
-                                ? "correct"
-                                : characterState.status;
+                return {
+                    ...oldWordState,
+                    characterIndex: oldWordState.characterIndex + 1,
+                    characters: oldWordState.characters.map(
+                        (characterState, characterIndex) => {
+                            if (
+                                characterIndex !== oldWordState.characterIndex
+                            ) {
+                                return characterState;
+                            }
 
-                        return {
-                            ...characterState,
-                            status: newStatus,
-                        };
-                    }
-                ),
-            };
-        });
+                            const newStatus = isCorrectCharacter
+                                ? characterState.status === "pending"
+                                    ? "correct"
+                                    : characterState.status
+                                : "incorrect";
+
+                            return {
+                                ...characterState,
+                                status: newStatus,
+                            };
+                        },
+                    ),
+                };
+            }),
+        );
     };
+
+    useEffect(() => {
+        if (isFinished) {
+            setResults(
+                createTypingReport({
+                    startTime,
+                    endTime: Date.now(),
+                    keystrokes: characterEntries,
+                    words,
+                }),
+            );
+        }
+    }, [isFinished, characterEntries, words]);
 
     return (
         <div>
             <WordBuffer
-                currentWordIndex={wordIndex}
-                words={mikki}
+                currentWordIndex={currentWordIndex}
+                words={words}
                 onChange={handleInputKeyPress}
             />
 
-            <div className={styles.wordLine}>
-                {words.map((word, index) => (
-                    <Word
-                        word={word}
-                        isCurrentWord={index === wordIndex}
-                        key={index}
-                    />
-                ))}
-            </div>
-
-            <CurrentWord wordState={wordState} />
+            <Results results={results} />
         </div>
     );
 };
