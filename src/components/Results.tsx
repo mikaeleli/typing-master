@@ -1,15 +1,15 @@
 import dayjs from "dayjs";
-import { TypingReport } from "../models/Word";
 import styles from "./Results.module.css";
+import { Report } from "../models/report";
 
 type Props = {
-    results: TypingReport | undefined;
+    report: Report | undefined;
 };
 
 export const Results = (props: Props) => {
-    const { results } = props;
+    const { report } = props;
 
-    if (!results) {
+    if (!report) {
         return null;
     }
 
@@ -21,19 +21,15 @@ export const Results = (props: Props) => {
                 <thead>
                     <tr>
                         <th>WPM</th>
-                        <th>Accuracy (Words)</th>
-                        <th>Accuracy (Keystrokes)</th>
-                        <th>Errors</th>
+                        <th>Accuracy</th>
                         <th>Time</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>{results.wordsPerMinute.toFixed(2)}</td>
-                        <td>{results.accuracy.words.toFixed(2)}%</td>
-                        <td>{results.accuracy.keystrokes.toFixed(2)}%</td>
-                        <td>{results.errors}</td>
-                        <td>{dayjs(results.time).format("mm:ss")}</td>
+                        <td>{report.wpm.toFixed(2)}</td>
+                        <td>{report.accuracy.toFixed(2)}%</td>
+                        <td>{dayjs(report.duration).format("mm:ss")}</td>
                     </tr>
                 </tbody>
             </table>

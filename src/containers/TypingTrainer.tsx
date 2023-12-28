@@ -1,139 +1,73 @@
 import { generate } from "random-words";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import {
-    CharacterEntry,
-    TypingReport,
-    createTypingReport,
-    createWordState,
-    getCurrentCharacterState,
-    getWordString,
-} from "../models/Word";
 import { WordBuffer } from "../components/WordBuffer";
 import { Results } from "../components/Results";
-
-const GO_TO_NEXT_WORD_CHAR = " ";
-
-const startTime = Date.now();
+import {
+    TypingState,
+    createTypingState,
+    deleteCharacter,
+    typeCharacter,
+} from "../models/Typing";
+import { SPACE_CHARACTER } from "../constants";
+import { Report, createReport } from "../models/report";
 
 export const TypingTrainer = () => {
-    const [characterEntries, setCharacterEntries] = useState<CharacterEntry[]>(
-        [],
+    const [typingState, setTypingState] = useState<TypingState>(
+        createTypingState(generate(3)),
     );
-    const [words, setWords] = useState(() => generate(10).map(createWordState));
-    const [currentWordIndex, setCurrentWordIndex] = useState(0);
-    const [results, setResults] = useState<TypingReport>();
 
-    const currentWordState = words[currentWordIndex];
+    const [report, setReport] = useState<Report>();
 
-    const isLastWord = currentWordIndex === words.length - 1;
-    const currentCharacterState = getCurrentCharacterState(currentWordState);
-    const isFinished = isLastWord && currentCharacterState === undefined;
+    const statusRef = useRef(typingState.status);
+    statusRef.current = typingState.status;
 
-    const handleInputKeyPress = (
-        event: React.ChangeEvent<HTMLInputElement>,
-    ) => {
-        if (isFinished) {
-            return;
-        }
-
-        const inputCharacter =
-            event.target.value[event.target.value.length - 1];
-
-        const shouldGoToNextWord =
-            inputCharacter === GO_TO_NEXT_WORD_CHAR &&
-            !currentWordState.characters.some(
-                (characterState) => characterState.status === "pending",
-            );
-
-        if (shouldGoToNextWord) {
-            setCurrentWordIndex((oldWordIndex) => oldWordIndex + 1);
-            return;
-        }
-
-        if (!currentCharacterState) {
-            return;
-        }
-
-        const charToMatch = currentCharacterState.character;
-
-        setCharacterEntries((prevState) => {
-            return [
-                ...prevState,
-                {
-                    character: inputCharacter,
-                    status:
-                        inputCharacter === charToMatch
-                            ? "correct"
-                            : "incorrect",
-                    context: {
-                        word: getWordString(currentWordState),
-                        characterIndex: currentWordState.characterIndex,
-                    },
-                },
-            ];
-        });
-
-        const isCorrectCharacter = inputCharacter === charToMatch;
-
-        setWords((prevState) =>
-            prevState.map((oldWordState) => {
-                const isCurrentWord = oldWordState.id === currentWordState.id;
-
-                if (!isCurrentWord) {
-                    return oldWordState;
-                }
-
-                return {
-                    ...oldWordState,
-                    characterIndex: oldWordState.characterIndex + 1,
-                    characters: oldWordState.characters.map(
-                        (characterState, characterIndex) => {
-                            if (
-                                characterIndex !== oldWordState.characterIndex
-                            ) {
-                                return characterState;
-                            }
-
-                            const newStatus = isCorrectCharacter
-                                ? characterState.status === "pending"
-                                    ? "correct"
-                                    : characterState.status
-                                : "incorrect";
-
-                            return {
-                                ...characterState,
-                                status: newStatus,
-                            };
-                        },
-                    ),
-                };
-            }),
-        );
-    };
+    console.log(typingState);
 
     useEffect(() => {
-        if (isFinished) {
-            setResults(
-                createTypingReport({
-                    startTime,
-                    endTime: Date.now(),
-                    keystrokes: characterEntries,
-                    words,
-                }),
-            );
+        function handleInputKeyPress(event: KeyboardEvent) {
+            if (statusRef.current === "finished") return;
+
+            const isBackspace = event.key === "Backspace";
+
+            if (isBackspace) {
+                setTypingState((prevState) => deleteCharacter(prevState));
+                return;
+            }
+
+            let character = event.key;
+
+            if (!isAllowedCharacter(character)) return;
+
+            if (character === " ") {
+                character = SPACE_CHARACTER;
+            }
+
+            setTypingState((prevState) => typeCharacter(prevState, character));
         }
-    }, [isFinished, characterEntries, words]);
+
+        window.addEventListener("keydown", handleInputKeyPress);
+
+        return () => {
+            window.removeEventListener("keydown", handleInputKeyPress);
+        };
+    }, [setTypingState]);
+
+    useEffect(() => {
+        if (typingState.status === "finished") {
+            setReport(createReport({ state: typingState }));
+        }
+    }, [typingState.status]);
 
     return (
         <div>
-            <WordBuffer
-                currentWordIndex={currentWordIndex}
-                words={words}
-                onChange={handleInputKeyPress}
-            />
+            <WordBuffer state={typingState} />
 
-            <Results results={results} />
+            <Results report={report} />
         </div>
     );
 };
+
+function isAllowedCharacter(character: string) {
+    return /^[a-z ]$/i.test(character);
+}
