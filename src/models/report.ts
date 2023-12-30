@@ -11,6 +11,8 @@ export type Report = {
     duration: number;
 };
 
+// https://www.speedtypingonline.com/typing-equations
+
 function getMinutesFromMilliseconds(milliseconds: number): number {
     return milliseconds / 1000 / 60;
 }
@@ -33,7 +35,7 @@ function calculateNetWordsPerMinute(
 ): number {
     const minutes = getMinutesFromMilliseconds(duration);
 
-    return grossWpm - uncorrectedErrors / minutes;
+    return Math.max(grossWpm - uncorrectedErrors / minutes, 0);
 }
 
 function calculateAccuracy(keystrokes: TypingEntry[]): number {

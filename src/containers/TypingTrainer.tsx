@@ -6,15 +6,13 @@ import { Results } from "../components/Results";
 import {
     TypingState,
     createTypingState,
-    deleteCharacter,
-    typeCharacter,
+    handleKeystroke,
 } from "../models/Typing";
-import { SPACE_CHARACTER } from "../constants";
 import { Report, createReport } from "../models/report";
 
 export const TypingTrainer = () => {
     const [typingState, setTypingState] = useState<TypingState>(
-        createTypingState(generate(3)),
+        createTypingState(generate(20)),
     );
 
     const [report, setReport] = useState<Report>();
@@ -28,22 +26,19 @@ export const TypingTrainer = () => {
         function handleInputKeyPress(event: KeyboardEvent) {
             if (statusRef.current === "finished") return;
 
-            const isBackspace = event.key === "Backspace";
+            if (!isAllowedEvent(event)) return;
 
-            if (isBackspace) {
-                setTypingState((prevState) => deleteCharacter(prevState));
-                return;
-            }
+            setTypingState((prevState) => {
+                if (prevState.status === "finished") return prevState;
 
-            let character = event.key;
+                const newState = handleKeystroke(prevState, event.key);
 
-            if (!isAllowedCharacter(character)) return;
+                if (newState.status === "finished") {
+                    setReport(createReport({ state: newState }));
+                }
 
-            if (character === " ") {
-                character = SPACE_CHARACTER;
-            }
-
-            setTypingState((prevState) => typeCharacter(prevState, character));
+                return newState;
+            });
         }
 
         window.addEventListener("keydown", handleInputKeyPress);
@@ -51,13 +46,7 @@ export const TypingTrainer = () => {
         return () => {
             window.removeEventListener("keydown", handleInputKeyPress);
         };
-    }, [setTypingState]);
-
-    useEffect(() => {
-        if (typingState.status === "finished") {
-            setReport(createReport({ state: typingState }));
-        }
-    }, [typingState.status]);
+    }, []);
 
     return (
         <div>
@@ -68,6 +57,10 @@ export const TypingTrainer = () => {
     );
 };
 
-function isAllowedCharacter(character: string) {
-    return /^[a-z ]$/i.test(character);
+function isAllowedEvent(event: KeyboardEvent) {
+    return (
+        event.key === "Backspace" ||
+        event.key === " " ||
+        /^[a-z]$/i.test(event.key)
+    );
 }
